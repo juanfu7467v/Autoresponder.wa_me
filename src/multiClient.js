@@ -1,36 +1,43 @@
-import makeWASocket, { useMemoryAuthState } from "@whiskeysockets/baileys";
-import { loadSession, saveSession } from "./sessionManager.js";
+import makeWASocket, {
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  DisconnectReason
+} from "@whiskeysockets/baileys";
 
-export async function createClient(botId) {
-  // 🔹 Auth en memoria (obligatorio para iniciar)
-  const { state, saveCreds } = useMemoryAuthState();
+import pino from "pino";
 
-  // 🔹 Intentamos recuperar la sesión guardada
-  const stored = await loadSession(botId);
+export async function createClient(id) {
+  console.log(`🟢 Inicializando cliente ${id}...`);
 
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      Object.assign(state.creds, parsed.creds || {});
-      Object.assign(state.keys, parsed.keys || {});
-      console.log("Sesion cargada correctamente:", botId);
-    } catch (e) {
-      console.log("Error al parsear sesión, generando nueva:", e);
-    }
-  }
+  // 📁 Carpeta donde se guardan los QR + sesión
+  const { state, saveCreds } = await useMultiFileAuthState(`auth/${id}`);
 
-  const socket = makeWASocket({
-    auth: state,
+  // 🔍 Obtener versión oficial de WhatsApp
+  const { version } = await fetchLatestBaileysVersion();
+
+  const sock = makeWASocket({
+    version,
+    logger: pino({ level: "silent" }),
     printQRInTerminal: false,
+    auth: state,
   });
 
-  // 🔹 Guardar sesión automáticamente
-  socket.ev.on("creds.update", async () => {
-    await saveSession(botId, {
-      creds: state.creds,
-      keys: state.keys,
-    });
+  // Guardar credenciales si cambian
+  sock.ev.on("creds.update", saveCreds);
+
+  // Manejo de desconexiones
+  sock.ev.on("connection.update", (update) => {
+    const { connection, lastDisconnect } = update;
+
+    if (connection === "close") {
+      const shouldReconnect =
+        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+
+      console.log(`❌ Cliente ${id} desconectado. Reintentar: ${shouldReconnect}`);
+
+      if (shouldReconnect) createClient(id);
+    }
   });
 
-  return socket;
+  return sock;
 }
