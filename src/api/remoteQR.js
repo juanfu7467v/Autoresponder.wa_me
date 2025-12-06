@@ -1,9 +1,17 @@
-let qrStore = {};
+// Almacén en memoria
+const qrStore = {};
 
-export function setQR(botId, qr) {
-  qrStore[botId] = qr;
+// Guardar QR
+export function setQR(bot, qr) {
+  qrStore[bot] = qr;
 }
 
-export function getQR(botId) {
-  return qrStore[botId] || null;
+// Obtener QR
+export function getQR(bot) {
+  return qrStore[bot] || null;
+}
+
+// Eliminar QR
+export function clearQR(bot) {
+  delete qrStore[bot];
 }
