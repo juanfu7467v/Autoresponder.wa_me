@@ -1,0 +1,15 @@
+app = "autoresponder-wa"
+primary_region = "mia"
+
+[env]
+  NODE_ENV = "production"
+  GITHUB_REPO = "${GITHUB_REPO}"
+
+[deploy]
+  strategy = "rolling"
+
+[processes]
+  app = "node src/index.js"
+
+[experimental]
+  auto_rollback = true
