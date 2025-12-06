@@ -6,107 +6,60 @@ import { setQR, getQR, clearQR } from "./api/remoteQR.js";
 const app = express();
 app.use(express.json());
 
-// Almacena bots activos
 const bots = {};
 
-/**
- * 🚀 Inicializa un bot por ID
- */
+// 🔥 INICIALIZAR UN BOT
 async function initBot(id) {
-  console.log(`Iniciando bot: ${id}`);
+  console.log(`🚀 Iniciando bot ${id}`);
 
   const client = await createClient(id);
 
-  // 📌 Manejo del QR
+  // 📌 Capturar QR
   client.ev.on("connection.update", (update) => {
-    const { qr, connection } = update;
-
+    const { qr } = update;
     if (qr) {
-      console.log(`🔥 QR generado para bot ${id}`);
+      console.log(`🟩 QR generado para ${id}`);
       setQR(id, qr);
-    }
-
-    if (connection === "open") {
-      console.log(`✅ Bot ${id} conectado correctamente`);
-      clearQR(id);
-    }
-
-    if (connection === "close") {
-      console.log(`⚠️ Bot ${id} desconectado`);
     }
   });
 
-  // 📌 Manejo de mensajes entrantes
+  // 📩 Mensajes entrantes
   client.ev.on("messages.upsert", async (msg) => {
-    try {
-      const text = msg.messages[0]?.message?.conversation;
-      const remote = msg.messages[0].key.remoteJid;
+    const m = msg.messages[0];
+    if (!m?.message?.conversation) return;
 
-      if (!text || !remote) return;
+    const text = m.message.conversation;
+    const from = m.key.remoteJid;
 
-      const reply = await runThread({ message: text });
-      await client.sendMessage(remote, { text: reply });
-    } catch (e) {
-      console.error("❌ Error al responder mensaje:", e);
-    }
+    const reply = await runThread({ message: text });
+    await client.sendMessage(from, { text: reply });
   });
 
   bots[id] = client;
 }
 
-/**
- * 🔄 Inicializa el bot principal
- */
+// Iniciar bot principal
 initBot("bot1");
 
-// -----------------------------------------------
-// 📌 ENDPOINTS
-// -----------------------------------------------
-
-/**
- * 📌 Obtener QR de un bot
- */
+// 📌 Obtener QR
 app.get("/qr/:bot", (req, res) => {
-  const botID = req.params.bot;
-  const qr = getQR(botID);
-
-  if (!qr) {
-    return res.json({
-      ok: false,
-      message: "El bot está conectado o aún no generó un QR."
-    });
-  }
-
-  res.json({ ok: true, qr });
+  res.json({ qr: getQR(req.params.bot) });
 });
 
-/**
- * 🔁 Resetear bot → desconectar y generar nuevo QR
- */
-app.post("/reset/:bot", async (req, res) => {
-  const botID = req.params.bot;
-  const existing = bots[botID];
+// 📌 RESET → borrar QR + reiniciar sesión (para escanear de nuevo)
+app.get("/reset/:bot", async (req, res) => {
+  const bot = req.params.bot;
 
-  if (existing) {
-    try {
-      await existing.logout();
-      delete bots[botID];
-      clearQR(botID);
-    } catch {}
-  }
+  console.log(`🧹 Reiniciando sesión del bot ${bot}`);
+  clearQR(bot);
 
-  console.log(`🔄 Reiniciando bot ${botID}...`);
-  await initBot(botID);
+  await initBot(bot);
 
-  res.json({
-    ok: true,
-    message: `Bot ${botID} reiniciado. Espera unos segundos y consulta /qr/${botID}`
-  });
+  res.json({ status: "ok", message: `Bot ${bot} reiniciado. Escanea el nuevo QR.` });
 });
 
-// -----------------------------------------------
-
+// Servidor Express
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Autoresponder funcionando en puerto ${PORT}`);
-});
+app.listen(PORT, "0.0.0.0", () =>
+  console.log(`🚀 Servidor Express escuchando en puerto ${PORT}`)
+);
