@@ -1,1 +1,0 @@
-# Autoresponder.wa_me
