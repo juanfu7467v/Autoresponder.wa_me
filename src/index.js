@@ -7,23 +7,41 @@ const app = express();
 app.use(express.json());
 
 const bots = {};
+const botStatus = {}; // ← guarda si está conectado o no
 
-// 🔥 INICIALIZAR UN BOT
+// 🚀 INICIALIZAR BOT
 async function initBot(id) {
   console.log(`🚀 Iniciando bot ${id}`);
 
   const client = await createClient(id);
 
-  // 📌 Capturar QR
+  // Guardamos instancia
+  bots[id] = client;
+  botStatus[id] = "iniciando";
+
+  // 📌 EVENTO: estado de conexión
   client.ev.on("connection.update", (update) => {
-    const { qr } = update;
+    const { qr, connection } = update;
+
     if (qr) {
       console.log(`🟩 QR generado para ${id}`);
+      botStatus[id] = "esperando_qr";
       setQR(id, qr);
+    }
+
+    if (connection === "open") {
+      console.log(`🟢 BOT ${id} AUTENTICADO`);
+      botStatus[id] = "autenticado";
+      clearQR(id);
+    }
+
+    if (connection === "close") {
+      console.log(`🔴 BOT ${id} DESCONECTADO`);
+      botStatus[id] = "desconectado";
     }
   });
 
-  // 📩 Mensajes entrantes
+  // 📩 RECEPCIÓN DE MENSAJES
   client.ev.on("messages.upsert", async (msg) => {
     const m = msg.messages[0];
     if (!m?.message?.conversation) return;
@@ -34,32 +52,55 @@ async function initBot(id) {
     const reply = await runThread({ message: text });
     await client.sendMessage(from, { text: reply });
   });
-
-  bots[id] = client;
 }
 
-// Iniciar bot principal
+// 🚀 Iniciar primer bot
 initBot("bot1");
 
-// 📌 Obtener QR
+// ===============================
+// 📌 ENDPOINTS
+// ===============================
+
+// 📌 1. Obtener QR
 app.get("/qr/:bot", (req, res) => {
-  res.json({ qr: getQR(req.params.bot) });
+  res.json({
+    qr: getQR(req.params.bot) || null,
+  });
 });
 
-// 📌 RESET → borrar QR + reiniciar sesión (para escanear de nuevo)
+// 📌 2. Consultar estado actual del bot
+app.get("/status/:bot", (req, res) => {
+  const bot = req.params.bot;
+
+  res.json({
+    bot,
+    status: botStatus[bot] || "desconocido",
+  });
+});
+
+// 📌 3. Resetear sesión y generar nuevo QR
 app.get("/reset/:bot", async (req, res) => {
   const bot = req.params.bot;
 
   console.log(`🧹 Reiniciando sesión del bot ${bot}`);
+
   clearQR(bot);
+  botStatus[bot] = "reiniciando";
 
   await initBot(bot);
 
-  res.json({ status: "ok", message: `Bot ${bot} reiniciado. Escanea el nuevo QR.` });
+  res.json({
+    bot,
+    status: "reiniciado",
+    message: `Nuevo QR generado para ${bot}.`,
+  });
 });
 
-// Servidor Express
+// ===============================
+// 🚀 Servidor Express
+// ===============================
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, "0.0.0.0", () =>
   console.log(`🚀 Servidor Express escuchando en puerto ${PORT}`)
 );
