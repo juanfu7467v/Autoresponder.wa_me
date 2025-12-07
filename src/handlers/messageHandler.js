@@ -17,6 +17,32 @@ const openaiModel = "gpt-3.5-turbo"; // Modelo de respaldo de OpenAI
 // =================================================================
 
 const KNOWLEDGE_BASE = [
+  // 🟢 1. NUEVA ENTRADA: SALUDOS Y BIENVENIDA (PRIORIDAD ALTO)
+  {
+    type: "👋 Saludos y Bienvenida",
+    phrases: [
+      "hola",
+      "buen día",
+      "buenas tardes",
+      "buenas noches",
+      "qué tal",
+      "buenas",
+      "saludos",
+      "hello",
+      "hi",
+    ],
+    response:
+      "¡Hola, crack! 👋 Soy el asistente virtual de **Consulta PE**. \n" +
+      "Estoy aquí para ayudarte de forma **inmediata** a conseguir créditos, descargar la app o resolver dudas sobre nuestras APIs.\n\n" +
+      "¿En qué puedo ayudarte hoy? Escribe directamente lo que necesitas (ej: *Comprar créditos*, *Problemas con el pago*, *Info de APIs*).",
+  },
+  // 🟢 2. NUEVA ENTRADA: DESPEDIDAS
+  {
+    type: "👋 Despedidas",
+    phrases: ["adiós", "chau", "hasta luego", "gracias por la ayuda", "me voy"],
+    response:
+      "¡Perfecto! Cuando necesites algo más, no dudes en escribir. ¡Que tengas un excelente día, crack! 💪",
+  },
   {
     type: "🛒 Comprar Créditos",
     phrases: ["quiero comprar créditos", "necesito créditos", "quiero el acceso", "¿dónde pago?", "¿cómo compro eso?", "me interesa la app completa", "dame acceso completo"],
@@ -38,7 +64,7 @@ const KNOWLEDGE_BASE = [
       "Buena elección, leyenda.\n\n" +
       "--- Configuración de Pagos (Consulta PE) ---\n\n" +
       "YAPE_NUMBER=\"929008609\"\n" +
-      "LEMON_QR_IMAGE=\"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjVr57hBat16wfEQdbsKJdF49WLYFvtNFvV-WPuKvpFnA1JWthDtw57AQ_U422Rcgi8WvrV7iQa0pdRzu0yVe/s1490/1000014418.png\"\n\n" +
+      "LEMON_QR_IMAGE=\"https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjVr57hBat16wfEQdbsKJdF49WLYFvtNFvV-WPuKvpFnA1JWthDtw57AQ_U422Rcgi8WvrV7iQaopdRzu0yVe/s1490/1000014418.png\"\n\n" +
       "Cuando lo hagas, mándame el comprobante + tu correo dentro de la app, y te activo los créditos sin perder el tiempo.",
   },
   {
@@ -236,11 +262,36 @@ async function runGemini(prompt) {
     Base URL: https://consulta-pe-apis-data-v2.fly.dev
     - Consultar DNI: GET https://consulta-pe-apis-data-v2.fly.dev/api/dni?dni=12345678
     - Consultar RUC: GET https://consulta-pe-apis-data-v2.fly.dev/api/ruc?ruc=10412345678
-    - ... [Incluir aquí el resto de endpoints de la sección "Básicos v1" y "Avanzados v2" para que la IA los pueda referenciar]
+    - Consultar Anexos RUC: GET https://consulta-pe-apis-data-v2.fly.dev/api/ruc-anexo?ruc=10412345678
+    - Consultar Representantes RUC: GET https://consulta-pe-apis-data-v2.fly.dev/api/ruc-representante?ruc=10412345678
     - Consultar CEE: GET https://consulta-pe-apis-data-v2.fly.dev/api/cee?cee=123456789
+    - Consultar SOAT por Placa: GET https://consulta-pe-apis-data-v2.fly.dev/api/soat-placa?placa=ABC123
+    - Consultar Licencia por DNI: GET https://consulta-pe-apis-data-v2.fly.dev/api/licencia?dni=12345678
     - Ficha RENIEC en Imagen: GET https://consulta-pe-apis-data-v2.fly.dev/api/ficha?dni=12345678
+    - RENIEC Datos Detallados: GET https://consulta-pe-apis-data-v2.fly.dev/api/reniec?dni=12345678
+    - Denuncias por DNI: GET https://consulta-pe-apis-data-v2.fly.dev/api/denuncias-dni?dni=12345678
+    - Denuncias por Placa: GET https://consulta-pe-apis-data-v2.fly.dev/api/denuncias-placa?placa=ABC123
+    - Historial de Sueldos: GET https://consulta-pe-apis-data-v2.fly.dev/api/sueldos?dni=12345678
+    - Historial de Trabajos: GET https://consulta-pe-apis-data-v2.fly.dev/api/trabajos?dni=12345678
+    - Consulta SUNAT por RUC/DNI: GET https://consulta-pe-apis-data-v2.fly.dev/api/sunat?data=10412345678
+    - SUNAT Razón Social: GET https://consulta-pe-apis-data-v2.fly.dev/api/sunat-razon?data=Mi Empresa SAC
+    - Historial de Consumos: GET https://consulta-pe-apis-data-v2.fly.dev/api/consumos?dni=12345678
     - Árbol Genealógico: GET https://consulta-pe-apis-data-v2.fly.dev/api/arbol?dni=12345678
-  `; // Puedes expandir la información de APIS aquí si lo deseas.
+    - Familia 1: GET https://consulta-pe-apis-data-v2.fly.dev/api/familia1?dni=12345678
+    - Familia 2: GET https://consulta-pe-apis-data-v2.fly.dev/api/familia2?dni=12345678
+    - Familia 3: GET https://consulta-pe-apis-data-v2.fly.dev/api/familia3?dni=12345678
+    - Movimientos Migratorios: GET https://consulta-pe-apis-data-v2.fly.dev/api/movimientos?dni=12345678
+    - Matrimonios: GET https://consulta-pe-apis-data-v2.fly.dev/api/matrimonios?dni=12345678
+    - Empresas Relacionadas: GET https://consulta-pe-apis-data-v2.fly.dev/api/empresas?dni=12345678
+    - Direcciones Relacionadas: GET https://consulta-pe-apis-data-v2.fly.dev/api/direcciones?dni=12345678
+    - Correos Electrónicos: GET https://consulta-pe-apis-data-v2.fly.dev/api/correos?dni=12345678
+    - Telefonía por Documento: GET https://consulta-pe-apis-data-v2.fly.dev/api/telefonia-doc?documento=12345678
+    - Telefonía por Número: GET https://consulta-pe-apis-data-v2.fly.dev/api/telefonia-num?numero=987654321
+    - Vehículos por Placa: GET https://consulta-pe-apis-data-v2.fly.dev/api/vehiculos?placa=ABC123
+    - Fiscalía por DNI: GET https://consulta-pe-apis-data-v2.fly.dev/api/fiscalia-dni?dni=12345678
+    - Fiscalía por Nombres: GET https://consulta-pe-apis-data-v2.fly.dev/api/fiscalia-nombres?nombres=Juan&apepaterno=Perez&apematerno=Gomez
+    - Ficha Completa en PDF: GET https://consulta-pe-apis-data-v2.fly.dev/api/info-total?dni=12345678
+  `;
 
   try {
     const response = await ai.models.generateContent({
@@ -274,20 +325,27 @@ async function processMessage({ message }) {
   // 1. INTENTO DE RESPUESTA ESTÁTICA (Prioridad: Precisión y temas críticos)
   for (const item of KNOWLEDGE_BASE) {
     if (item.phrases.some((phrase) => lowerCaseMessage.includes(phrase))) {
-      // Manejo específico de casos complejos que requieren respuesta exacta
+      
+      // Manejo específico de casos complejos que requieren respuesta EXACTA
+      // ⚠️ NOTA: Este código es redundante para el caso de 'Acceso Permanente' y 'Problemas Persistentes'
+      // porque ya están en la KNOWLEDGE_BASE, pero los mantengo por si quieres forzar la respuesta exacta.
+
+      // CASO ESPECIAL 1: Acceso Permanente (Respuesta larga y crítica)
       if (item.type === "Acceso permanente" && lowerCaseMessage.includes("acceso permanente")) {
         return "Hola 👋 estimado usuario,\n\nEntendemos tu incomodidad. Es completamente válida.\nSe te ofreció acceso hasta octubre de 2025, y no vamos a negar eso. Pero, escúchalo bien: los accesos antiguos fueron desactivados por situaciones que escaparon de nuestras manos.\n¿La diferencia entre otros y nosotros? Que actuamos de inmediato, no esperamos a que el problema creciera. Reestructuramos todo el sistema y aceleramos los cambios estratégicos necesarios para seguir ofreciendo un servicio de nivel.\nTodo está respaldado por nuestros Términos y Condiciones, cláusula 11: “Terminación”. Ahí se aclara que podemos aplicar ajustes sin previo aviso cuando la situación lo requiera. Y esta era una de esas situaciones.\nEste cambio ya estaba en el mapa. Solo lo adelantamos. Porque nosotros no seguimos al resto: nos adelantamos. Siempre un paso adelante, nunca atrás.\nY porque valoramos tu presencia, te vamos a regalar 15 créditos gratuitos para que pruebes sin compromiso nuestros nuevos servicios.\nUna vez los uses, tú decides si quieres seguir en este camino con nosotros. Nadie te obliga. Pero si sabes elegir, sabes lo que conviene.\nGracias por seguir apostando por lo que realmente vale.\nEquipo de Soporte – Consulta PE";
       }
       
+      // CASO ESPECIAL 2: Problema Persistente (Relevo a Soporte)
       if (item.type === "😕Si continua con el mismo problema más de 2 beses" && (lowerCaseMessage.includes("continua con el mismo problema") || lowerCaseMessage.includes("sigue fallando") || lowerCaseMessage.includes("no me llega mis créditos"))) {
         return "⚠️ Tranquilo, sé que no obtuviste exactamente lo que esperabas… todavía.\nEstoy en fase de mejora constante, aprendiendo y evolucionando, como todo sistema que apunta a ser el mejor. Algunas cosas aún están fuera de mi alcance, pero no por mucho tiempo.\nYa envié una alerta directa al encargado de soporte, quien sí o sí te va a contactar para resolver esto como se debe. Aquí no dejamos nada a medias.\n💡 Lo importante es que estás siendo atendido y tu caso ya está siendo gestionado. Paciencia... todo lo bueno toma su tiempo, pero te aseguro que la solución está en camino.";
       }
 
-      return item.response; // Respuesta estática encontrada.
+      // Respuesta estática general encontrada (incluye Saludos y Despedidas)
+      return item.response; 
     }
   }
 
-  // 2. INTENTO CON GEMINI (Primario)
+  // 2. Si no hay coincidencia local, INTENTO CON GEMINI (Primario)
   let aiResponse = await runGemini(lowerCaseMessage);
 
   // 3. FAILOVER A OPENAI (Respaldo)
@@ -311,4 +369,3 @@ processMessage(workerData)
     console.error("Error en el worker thread:", error);
     parentPort.postMessage("Hubo un error interno al procesar tu solicitud.");
   });
-
