@@ -11,7 +11,8 @@
     "@whiskeysockets/baileys": "latest",
     "axios": "latest",
     "express": "latest",
-    "pino": "latest"
+    "pino": "latest",
+    "cors": "latest"
   },
   "devDependencies": {
     "nodemon": "latest"
