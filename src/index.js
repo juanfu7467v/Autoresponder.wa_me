@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors";
+import cors from "cors"; // ← IMPORTANTE
 import { createClient } from "./multiClient.js";
 import { runThread } from "./threadEngine.js";
 import { setQR, getQR, clearQR } from "./api/remoteQR.js";
@@ -7,28 +7,31 @@ import { setQR, getQR, clearQR } from "./api/remoteQR.js";
 const app = express();
 app.use(express.json());
 
-// 🔥 ACTIVAR CORS PARA QUE TU APP PUEDA CARGAR EL QR DESDE CUALQUIER WEB
-app.use(cors({
-  origin: "*",
-  methods: "GET,POST",
-  allowedHeaders: "Content-Type"
-}));
+// =====================================================
+// 🔥 ACTIVAR CORS PARA QUE TU APP CARGUE EL QR
+// =====================================================
+app.use(
+  cors({
+    origin: "*",            // ← Permitir acceso desde cualquier web
+    methods: "GET,POST",    // ← Permitir estos métodos
+    allowedHeaders: "*"     // ← Permitir cualquier cabecera
+  })
+);
 
 const bots = {};
-const botStatus = {}; // ← guarda el estado de cada bot
+const botStatus = {}; // Estado actual del bot
 
 // =====================================================
 // 🚀 INICIALIZAR BOT
 // =====================================================
 async function initBot(id) {
   console.log(`🚀 Iniciando bot ${id}`);
-
-  const client = await createClient(id);
-
-  bots[id] = client;
   botStatus[id] = "iniciando";
 
-  // 📌 EVENTO: actualización de conexión
+  const client = await createClient(id);
+  bots[id] = client;
+
+  // 📌 EVENTO: Estado de conexión
   client.ev.on("connection.update", (update) => {
     const { qr, connection } = update;
 
@@ -39,18 +42,18 @@ async function initBot(id) {
     }
 
     if (connection === "open") {
-      console.log(`🟢 BOT ${id} AUTENTICADO`);
+      console.log(`🟢 BOT ${id} autenticado correctamente`);
       botStatus[id] = "autenticado";
       clearQR(id);
     }
 
     if (connection === "close") {
-      console.log(`🔴 BOT ${id} DESCONECTADO`);
+      console.log(`🔴 BOT ${id} desconectado`);
       botStatus[id] = "desconectado";
     }
   });
 
-  // 📩 RECEPCIÓN DE MENSAJES
+  // 📩 EVENTO: Mensajes recibidos
   client.ev.on("messages.upsert", async (msg) => {
     const m = msg.messages[0];
     if (!m?.message?.conversation) return;
@@ -58,26 +61,39 @@ async function initBot(id) {
     const text = m.message.conversation;
     const from = m.key.remoteJid;
 
+    console.log(`📩 Mensaje recibido de ${from}: ${text}`);
+
     const reply = await runThread({ message: text });
     await client.sendMessage(from, { text: reply });
   });
 }
 
-// 🚀 Iniciar bot principal
+// Iniciar bot principal
 initBot("bot1");
 
 // =====================================================
-// 📌 ENDPOINTS PÚBLICOS
+// 📌 1. JSON → Obtener QR crudo
 // =====================================================
-
-// 1️⃣ Obtener QR
 app.get("/qr/:bot", (req, res) => {
-  res.json({
-    qr: getQR(req.params.bot) || null,
-  });
+  res.json({ qr: getQR(req.params.bot) || null });
 });
 
-// 2️⃣ Estado del bot
+// =====================================================
+// 📌 2. PNG → QR listo para mostrar en AppCreator24
+// =====================================================
+app.get("/qr-png/:bot", (req, res) => {
+  const qr = getQR(req.params.bot);
+
+  if (!qr) return res.status(404).send("QR no disponible");
+
+  const googleQR = `https://chart.googleapis.com/chart?chs=400x400&cht=qr&chl=${encodeURIComponent(qr)}`;
+
+  res.redirect(googleQR);
+});
+
+// =====================================================
+// 📌 3. Estado del bot
+// =====================================================
 app.get("/status/:bot", (req, res) => {
   const bot = req.params.bot;
   res.json({
@@ -86,10 +102,11 @@ app.get("/status/:bot", (req, res) => {
   });
 });
 
-// 3️⃣ Reiniciar y generar nuevo QR
+// =====================================================
+// 📌 4. Resetear sesión → Generar nuevo QR
+// =====================================================
 app.get("/reset/:bot", async (req, res) => {
   const bot = req.params.bot;
-
   console.log(`🧹 Reiniciando sesión del bot ${bot}`);
 
   clearQR(bot);
@@ -100,14 +117,15 @@ app.get("/reset/:bot", async (req, res) => {
   res.json({
     bot,
     status: "reiniciado",
-    message: `Nuevo QR generado para ${bot}.`,
+    message: `Nuevo QR generado para ${bot}`,
   });
 });
 
 // =====================================================
-// 🚀 Servidor Express
+// 🚀 SERVIDOR
 // =====================================================
 const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, "0.0.0.0", () =>
-  console.log(`🚀 Servidor Express escuchando en puerto ${PORT}`)
+  console.log(`🚀 Servidor Express funcionando en puerto ${PORT}`)
 );
