@@ -12,7 +12,8 @@
     "axios": "latest",
     "express": "latest",
     "pino": "latest",
-    "cors": "latest"
+    "cors": "latest",
+    "@google/genai": "latest"
   },
   "devDependencies": {
     "nodemon": "latest"
